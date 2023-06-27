@@ -126,7 +126,7 @@
                 .data([...new Set(data.map(d => d.Format))])
                 .enter().append('g')
                 .attr('class', 'legend')
-                .attr('transform', (d, i) => `translate(0, ${i * 30})`);  // Adjust the vertical translation value (30 in this case)
+                .attr('transform', (d, i) => `translate(0, ${i * 30})`); 
 
             legend.append('rect')
                 .attr('x', 0)

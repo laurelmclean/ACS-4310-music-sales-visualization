@@ -40,6 +40,16 @@
         font-size: 12px;
         margin-left: 5px;
     }
+
+    .tooltip {
+        position: absolute;
+        background-color: #f9f9f9;
+        padding: 5px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        pointer-events: none;
+        font-size: 12px;
+    }
 </style>
 </head>
 
@@ -51,6 +61,8 @@
         <svg id="legend" width="250" height="800"></svg>
     </div>
 
+    <div class="tooltip"></div>
+
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script>
 
@@ -58,7 +70,7 @@
 
 
             const data = await d3.csv('musicdata.csv');
-              // Filter out negative values
+            // Filter out negative values
             const filteredData = data.filter(d => +d.Value >= 0);
             // Perform data transformation
             let pivotedData = filteredData.reduce(function (acc, d) {
@@ -76,8 +88,6 @@
             // Convert the pivotedData object to an array of values
             pivotedData = Object.values(pivotedData);
 
-            // Access the pivoted data
-            console.log(pivotedData);
             const margin = { top: 20, right: 10, bottom: 20, left: 70 }
             const width = 1400 - (margin.left + margin.right)
             const height = 850 - (margin.top + margin.bottom)
@@ -105,7 +115,7 @@
             // Calculate the maximum sales value with some buffer space
             const maxSalesValue = d3.max(data, d => +d.Value);
             const yscale = d3.scaleLinear()
-                .domain([0, maxSalesValue * 1.2])  // Adjust the multiplier as needed to provide enough space
+                .domain([0, maxSalesValue * 1.2]) 
                 .range([height, margin.top]);
 
             // Select the SVG (root node)
@@ -123,18 +133,31 @@
             // Show the bars
             svg.append("g")
                 .selectAll("g")
-                // Enter in the stack data = loop key per key = group per group
                 .data(stackedData)
                 .join("g")
                 .attr("fill", d => colorScale(d.key))
                 .selectAll("rect")
-                // enter a second time = loop subgroup per subgroup to add all rectangles
                 .data(d => d)
                 .join("rect")
                 .attr("x", d => xscale(d.data.Year))
                 .attr("y", d => yscale(d[1]))
                 .attr("height", d => yscale(d[0]) - yscale(d[1]))
                 .attr("width", xscale.bandwidth())
+                .on("mouseenter", function (event, d) {
+                    const format = d3.select(this.parentNode).datum().key;
+                    const value = d.data[format];
+                    const formattedValue = (value * 1000000 / 1e9).toFixed(2) + "B";
+                    const tooltip = d3.select('.tooltip');
+                    tooltip
+                        .style('display', 'block')
+                        .style('left', event.pageX + 'px')
+                        .style('top', event.pageY + 'px')
+                        .text(`${format}: ${formattedValue}`);
+                })
+                .on("mouseleave", function () {
+                    const tooltip = d3.select('.tooltip');
+                    tooltip.style('display', 'none');
+                });
 
             const bottomAxis = d3.axisBottom(xscale);
 
@@ -164,7 +187,7 @@
                 .data([...new Set(data.map(d => d.Format))])
                 .enter().append('g')
                 .attr('class', 'legend')
-                .attr('transform', (d, i) => `translate(0, ${i * 30})`);  // Adjust the vertical translation value (30 in this case)
+                .attr('transform', (d, i) => `translate(0, ${i * 30})`);  
 
             legend.append('rect')
                 .attr('x', 0)
