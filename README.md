@@ -2,8 +2,6 @@
 
 This project showcases a data visualization that presents the total music sales in the United States from 1973 to 2019, along with a breakdown of music sales by format. The visualization provides valuable insights into the changes and trends in the music industry over the past few decades.
 
-![US Music Sales Visualization Bar Chart](bar.png)
-
 ![US Music Sales Visualization Line Graph](line.png)
 
 ![US Music Sales Visualization Stacked Bar Chart](stacked.png)
