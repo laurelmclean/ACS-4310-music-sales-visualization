@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Total Sales</title>
+</head>
+
+<style>
+    body,
+    html {
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        font-family: "Helvetica", Arial, sans-serif;
+    }
+</style>
+
+<body>
+    <h1>Total US Music Sales 1973-2019</h1>
+
+    <svg id="svg" width="1400" height="900"></svg>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        async function handleData() {
+            const rawData = await d3.csv('musicdata.csv');
+            const data = rawData.filter(d => +d.Value >= 0); // Filter out negative values
+            const margin = { top: 20, right: 10, bottom: 20, left: 70 };
+            const width = 1400 - (margin.left + margin.right);
+            const height = 850 - (margin.top + margin.bottom);
+
+            // Perform data transformation
+            let pivotedData = data.reduce(function (acc, d) {
+                const key = d.Year;
+                if (!acc[key]) {
+                    acc[key] = {
+                        Year: d.Year,
+                        "Number of Records": d["Number of Records"],
+                    };
+                }
+                acc[key][d.Format] = d.Value;
+                return acc;
+            }, {});
+
+            // Convert the pivotedData object to an array of values
+            pivotedData = Object.values(pivotedData);
+
+            // Get the list of all formats
+            const formats = Object.keys(pivotedData[0]).filter(key => key !== "Year" && key !== "Number of Records");
+
+            // Calculate the maximum total sales value across all formats
+            const maxTotalSales = d3.max(pivotedData, d => d3.sum(formats, format => +d[format]));
+
+            // x scale
+            const xscale = d3
+                .scaleBand()
+                .domain(pivotedData.map(d => d.Year))
+                .range([margin.left, width + margin.left])
+                .padding(0.1);
+
+            // y scale
+            const yscale = d3
+                .scaleLinear()
+                .domain([0, maxTotalSales * 1.07])
+                .range([height, margin.top]);
+
+            // Create a line generator
+            const line = d3
+                .line()
+                .x(d => xscale(d.Year) + xscale.bandwidth() / 2)
+                .y(d => yscale(d3.sum(formats, format => +d[format])));
+
+            // Select the SVG (root node)
+            const svg = d3.select('#svg');
+
+            // Draw the line
+            svg
+                .append("path")
+                .datum(pivotedData)
+                .attr("fill", "none")
+                .attr("stroke", "steelblue")
+                .attr("stroke-width", 2)
+                .attr("d", line);
+            const bottomAxis = d3.axisBottom(xscale);
+
+            svg
+                .append('g')
+                .attr('transform', `translate(${0}, ${height})`)
+                .call(bottomAxis);
+
+            const leftAxis = d3.axisLeft(yscale)
+                .ticks(12)
+                .tickSize(-width)
+                .tickFormat(d => {
+                    // Divide the number by 1000 to remove three zeros
+                    const formattedNumber = d / 1000;
+                    return formattedNumber
+                });
+
+            svg
+                .append('g')
+                .attr('transform', `translate(${margin.left}, 0)`)
+                .call(leftAxis);
+
+            // Add x-axis label
+            svg
+                .append('text')
+                .attr('x', width / 2 + margin.left)
+                .attr('y', height + margin.top + 30)
+                .style('text-anchor', 'middle')
+                .text('Year');
+
+            // Add y-axis label
+            svg
+                .append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('x', -(height / 2 + margin.top))
+                .attr('y', margin.left - 50)
+                .style('text-anchor', 'middle')
+                .text('Value in $ billions');
+        }
+
+
+        handleData();
+    </script>
+</body>
+
+</html>

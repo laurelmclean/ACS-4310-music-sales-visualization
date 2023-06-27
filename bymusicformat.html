@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Sales</title>
+</head>
+<style>
+    body,
+    html {
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: "Helvetica", Arial, sans-serif;
+        flex-direction: column;
+    }
+
+    .chart {
+        display: flex;
+    }
+
+    #legend {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        margin-left: 20px;
+    }
+
+    #legend .legend {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    #legend text {
+        font-size: 12px;
+        margin-left: 5px;
+    }
+</style>
+</head>
+
+<body>
+
+    <h1>US Music Sales by Format 1973-2019 (Overlapping Bar Chart)</h1>
+    <div class="chart">
+        <svg id="svg" width="1400" height="900"></svg>
+        <svg id="legend" width="250" height="800"></svg>
+    </div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        
+        async function handleData() {
+            const rawData = await d3.csv('musicdata.csv');
+            const data = rawData.filter(d => +d.Value >= 0);  // Filter out negative values
+            const margin = { top: 20, right: 10, bottom: 20, left: 70 }
+            const width = 1400 - (margin.left + margin.right)
+            const height = 850 - (margin.top + margin.bottom)
+
+            // Create a unique color scale for the music formats
+            const uniqueFormats = [...new Set(data.map(d => d.Format))];
+            const colorScale = d3.scaleOrdinal()
+                .domain(uniqueFormats)
+                .range(d3.quantize(t => d3.interpolateRainbow(t), uniqueFormats.length));
+
+            // x scale
+            const xscale = d3.scaleBand()
+                .domain(data.map(d => d.Year))
+                .range([margin.left, width + margin.left])
+                .padding(0.1);
+
+            // y scale
+            const salesExtent = d3.extent(data, d => +d.Value)
+            const yscale = d3.scaleLinear()
+                .domain(salesExtent)
+                .range([height, margin.top]);
+
+            // Select the SVG (root node)
+            const svg = d3.select('#svg');
+
+            // bars group
+            const barGroup = svg.append('g');
+
+            // Make the bars
+            barGroup
+                .selectAll('rect')
+                .data(data)
+                .enter()
+                .append('rect')
+                .attr('class', 'bar')
+                .attr('x', (d, i) => xscale(d.Year))
+                .attr('y', d => yscale(+d.Value))
+                .attr('width', xscale.bandwidth())
+                .attr('height', d => height - yscale(+d.Value))
+                .attr('fill', d => colorScale(d.Format));
+
+            const bottomAxis = d3.axisBottom(xscale);
+
+            svg
+                .append('g')
+                .attr('transform', `translate(${0}, ${height})`)
+                .call(bottomAxis);
+
+            const leftAxis = d3.axisLeft(yscale)
+                .ticks(12)
+                .tickSize(-width)
+                                .tickFormat(d => {
+                    // Divide the number by 1000 to remove three zeros
+                    const formattedNumber = d / 1000;
+                    return formattedNumber
+                });
+
+            svg
+                .append('g')
+                .attr('transform', `translate(${margin.left}, 0)`)
+                .call(leftAxis);
+
+            // Create the legend
+            const legendSvg = d3.select('#legend');
+
+            const legend = legendSvg.selectAll('.legend')
+                .data([...new Set(data.map(d => d.Format))])
+                .enter().append('g')
+                .attr('class', 'legend')
+                .attr('transform', (d, i) => `translate(0, ${i * 30})`);  // Adjust the vertical translation value (30 in this case)
+
+            legend.append('rect')
+                .attr('x', 0)
+                .attr('y', 10)
+                .attr('width', 18)
+                .attr('height', 18)
+                .style('fill', colorScale);
+
+            legend.append('text')
+                .attr('x', 24)
+                .attr('y', 19)
+                .text(d => d);
+
+            // Add x-axis label
+            svg
+                .append('text')
+                .attr('x', width / 2 + margin.left)
+                .attr('y', height + margin.top + 30)
+                .style('text-anchor', 'middle')
+                .text('Year');
+
+            // Add y-axis label
+            svg
+                .append('text')
+                .attr('transform', 'rotate(-90)')
+                .attr('x', -(height / 2 + margin.top))
+                .attr('y', margin.left - 50)
+                .style('text-anchor', 'middle')
+                .text('Value in $ billions');
+        }
+
+        handleData();
+    </script>
+</body>
+
+</html>
